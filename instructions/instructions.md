@@ -1,40 +1,105 @@
-# Project Overview
-You are build a Reddit analytics platform, where users can get analytics of different subreddits, where they can see top contents & see category of posts; 
+# Product Requirements Document (PRD)
 
-You will be using Nextjs 14, shadcn, tailwin, lucid icon
+## Project Overview
+The goal is to create a Reddit analytics platform where users can analyze different subreddits, view top content, and explore categorized themes of posts. The platform will use the following technologies:
 
-# Core Functionality
+- **Frontend**: Next.js 14, TailwindCSS, shadcn, Lucid Icons
+- **Backend**: Snoowrap for Reddit API integration, OpenAI for categorization
+- **Core Libraries**: Snoowrap for fetching Reddit data, OpenAI API for text analysis
 
-1. See list of available sub reddits & add new sub reddits
-    - Users can see list of available sub reddits that already created display in cards, common ones like "ollama", "openai"
-    - Users can clickin and add reddit button, which should open a modal for users to paste in reddit url and add
-    - After users adding a new reddit, a new card should be added
-2. Subreddit page
-    - Clicking on each subreddit, should goes to a reddit page
-    - With 2 tabs: "Top posts", "Themes"
-3. Fetch reddit posts data in "Top posts"
-    - Under "Top posts" page, we want to display fetched reddit posts from past 24 hrs
-    - We will use snoowrap as library to fetch reddit data
-    - Each post including title, score, content, url, created_utc, num_comments
-    - Display the reddits in a table component, Sort based on num of score
-4. Analyse reddit posts data in "Themes"
-    - For each post, we should send post data to OpenAl using structured output to categorise "Solution requests", "Pain & anger", "Advice requests", "Money talk";
-        - "Solution requests": Posts where people are seeking solutions for problems
-        - "Pain & anger": Posts where people are expressing frustration or anger
-        - "Advice requests": Posts where people are seeking advice or recommendations
-        - "Money talk": Posts where people are discussing financial topics or asking for financial advice
-    - This process needs to be ran concurrently for posts, so it will be faster
-    - In "Themes" page, we want to display the count of each category, with title, description, and num of counts
-    - Clicking on the card will open side panel to display all posts under this category
-5. Ability to add new cards
-    - Users should be able to add a new card
-    - After a new card is added, it should trigger the analysis again
+---
 
-# Doc
-## Documentation of how to use snoowrap to fetch reddit posts data
+## Core Functionality
 
-CODE EXAMPLE:
+### 1. Subreddit Management
+#### User Story:
+Users can view a list of available subreddits and add new ones.
+
+#### Features:
+- Display a list of subreddit cards for common subreddits (e.g., `ollama`, `openai`).
+- Add Subreddit:
+  - Clicking a button opens a modal for the user to paste a subreddit URL.
+  - After submission, a new card is dynamically created and displayed.
+
+### 2. Subreddit Page
+#### User Story:
+Users can view detailed analytics for a selected subreddit.
+
+#### Features:
+- Each subreddit has a dedicated page with two tabs:
+  1. **Top Posts**: Displays a table of the top posts from the past 24 hours.
+  2. **Themes**: Categorizes posts into pre-defined themes using OpenAI.
+
+### 3. Fetch Reddit Posts Data ("Top Posts")
+#### User Story:
+Users can view a sorted table of Reddit posts based on scores from the past 24 hours.
+
+#### Features:
+- Fetch posts using Snoowrap:
+  - Include `title`, `score`, `content`, `url`, `created_utc`, and `num_comments`.
+- Display posts in a sortable table component.
+- Default sorting: `num_comments`.
+
+### 4. Analyze Reddit Posts Data ("Themes")
+#### User Story:
+Users can explore categorized themes of posts.
+
+#### Features:
+- Analyze posts with OpenAI into categories:
+  1. **Solution Requests**
+  2. **Pain & Anger**
+  3. **Advice Requests**
+  4. **Money Talk**
+- Display counts for each category.
+- Clicking a category card opens a side panel to view all posts within that category.
+
+#### Processing:
+- Send data to OpenAI for concurrent analysis.
+
+### 5. Dynamic Card Addition
+#### User Story:
+Users can dynamically add new subreddit cards and trigger re-analysis.
+
+---
+
+## File Structure
+### Root Directory
 ```
+reddit-analytics-platform
+├── README.md
+├── app
+│   ├── favicon.ico
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx
+├── components
+│   ├── ui
+│   ├── SubredditCard.tsx
+│   ├── AddSubredditModal.tsx
+│   ├── TopPostsTable.tsx
+│   └── ThemeCards.tsx
+├── lib
+│   ├── redditClient.ts
+│   └── openaiClient.ts
+├── pages
+│   └── [subreddit]
+│       ├── index.tsx
+│       ├── TopPosts.tsx
+│       └── Themes.tsx
+├── public
+│   ├── icons
+│   │   ├── globe.svg
+│   │   ├── add.svg
+│   │   └── settings.svg
+├── tailwind.config.ts
+└── tsconfig.json
+```
+---
+
+## Documentation
+### Snoowrap: Fetching Reddit Posts
+#### Example Code
+```javascript
 process.removeAllListeners('warning');
 process.on('warning', (warning) => {
   if (warning.name === 'DeprecationWarning' && warning.message.includes('punycode')) {
@@ -66,16 +131,11 @@ const reddit = new snoowrap({
 
 export async function getRecentPosts(subreddit: string): Promise<RedditPost[]> {
   try {
-    // Get current time and 24 hours ago in seconds
     const now = Math.floor(Date.now() / 1000);
     const yesterday = now - (24 * 60 * 60);
 
-    // Fetch posts from the subreddit
-    const posts = await reddit
-      .getSubreddit(subreddit)
-      .getNew({ limit: 100 }); // Get up to 100 newest posts
+    const posts = await reddit.getSubreddit(subreddit).getNew({ limit: 100 });
 
-    // Filter and map the posts
     const recentPosts = posts
       .filter((post: any) => post.created_utc >= yesterday)
       .map((post: any) => ({
@@ -88,12 +148,11 @@ export async function getRecentPosts(subreddit: string): Promise<RedditPost[]> {
       }));
 
     return recentPosts;
-
   } catch (error) {
     console.error('Error fetching Reddit posts:', error);
     throw error;
   }
-} 
+}
 
 async function main() {
   try {
@@ -112,15 +171,13 @@ async function main() {
   }
 }
 
-// Execute the main function
-main(); 
-
+main();
 ```
+---
 
-## Documentation of how to use OpenAI to analyse reddit posts
-
-CODE EXAMPLE:
-```
+### OpenAI: Analyzing Reddit Posts
+#### Example Code
+```javascript
 process.removeAllListeners('warning');
 process.on('warning', (warning) => {
   if (warning.name === 'DeprecationWarning' && warning.message.includes('punycode')) {
@@ -133,31 +190,18 @@ import OpenAI from "openai";
 import { z } from "zod";
 import { zodResponseFormat } from "openai/helpers/zod";
 
-// Initialize OpenAI client
 const openai = new OpenAI({
-  apiKey: "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",
+  apiKey: "sk-...",
 });
 
-// Define the Zod schema for post analysis with detailed descriptions
 const PostCategorySchema = z.object({
-  solutionRequest: z.boolean().describe(
-    "Posts where people are seeking solutions for problems. Look for phrases indicating technical issues, bugs, or specific problems that need solving."
-  ),
-  painAndAnger: z.boolean().describe(
-    "Posts expressing frustration, pain, or anger. Look for emotional language, complaints, or expressions of dissatisfaction."
-  ),
-  adviceRequest: z.boolean().describe(
-    "Posts seeking advice or recommendations. Look for questions about best practices, opinions, or guidance on decisions."
-  ),
-  moneyTalk: z.boolean().describe(
-    "Posts discussing financial topics or spending. Look for mentions of costs, prices, investments, or any money-related discussions."
-  ),
-  explanation: z.string().describe(
-    "Provide a brief explanation of why the post fits into the selected categories."
-  )
+  solutionRequest: z.boolean().describe("Seeking solutions for problems."),
+  painAndAnger: z.boolean().describe("Expressing frustration or anger."),
+  adviceRequest: z.boolean().describe("Seeking advice or recommendations."),
+  moneyTalk: z.boolean().describe("Discussing financial topics."),
+  explanation: z.string().describe("Why the post fits the categories."),
 });
 
-// Type inference from the schema
 type PostCategoryAnalysis = z.infer<typeof PostCategorySchema>;
 
 export async function analyzePost(title: string, content: string): Promise<PostCategoryAnalysis> {
@@ -165,49 +209,22 @@ export async function analyzePost(title: string, content: string): Promise<PostC
     const completion = await openai.beta.chat.completions.parse({
       model: "gpt-4o-mini",
       messages: [
-        {
-          role: "system",
-          content: "You are a post categorization system. Analyze the given post and categorize it according to the defined schema. Provide detailed reasoning in the explanation field."
-        },
-        {
-          role: "user",
-          content: `Title: ${title}\nContent: ${content}`
-        }
+        { role: "system", content: "Categorize the given post." },
+        { role: "user", content: `Title: ${title}\nContent: ${content}` },
       ],
       response_format: zodResponseFormat(PostCategorySchema, "post_category_analysis"),
     });
 
-    // Handle the case where parsing returns null
     const analysis = completion.choices[0].message.parsed;
     if (!analysis) {
       throw new Error('Failed to parse OpenAI response');
     }
 
     return analysis;
-
   } catch (error) {
     console.error('Error analyzing post:', error);
     throw error;
   }
 }
-
-// Example usage:
-async function testAnalysis() {
-  const testPost = {
-    title: "Having issues with Ollama installation - Need help!",
-    content: "I'm really frustrated with the installation process. I've tried everything but keep getting errors. I spent $50 on a course that recommended this. Can someone please help me figure out what's wrong?"
-  };
-
-  try {
-    const analysis = await analyzePost(testPost.title, testPost.content);
-    console.log('Post Analysis:', analysis);
-  } catch (error) {
-    console.error('Test failed:', error);
-  }
-}
-
-// Uncomment to test
-testAnalysis();
 ```
 
-# Current File Structure
