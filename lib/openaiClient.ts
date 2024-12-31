@@ -2,24 +2,60 @@ import OpenAI from "openai";
 import { z } from "zod";
 import { type RedditPost } from "./redditClient";
 
+// Debug: log the first few characters of the API key
+console.log("API Key prefix:", process.env.NEXT_PUBLIC_OPENAI_API_KEY?.substring(0, 7));
+
 const openai = new OpenAI({
   apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
   dangerouslyAllowBrowser: true
 });
 
-const ThemeSchema = z.object({
-  theme: z.enum([
-    "Solution Requests",
-    "Pain & Anger",
-    "Advice Requests",
-    "Money Talk"
-  ]),
-  confidence: z.number().min(0).max(1),
+const PostCategorySchema = z.object({
+  solutionRequest: z.boolean(),
+  painAndAnger: z.boolean(),
+  adviceRequest: z.boolean(),
+  moneyTalk: z.boolean(),
+  explanation: z.string()
 });
 
+type PostCategoryAnalysis = z.infer<typeof PostCategorySchema>;
+
 export interface AnalyzedPost extends RedditPost {
-  theme: string;
-  confidence: number;
+  categories: PostCategoryAnalysis;
+}
+
+async function analyzePost(title: string, content: string): Promise<PostCategoryAnalysis> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { 
+          role: "system", 
+          content: `Analyze the post and categorize it into themes. Respond with a JSON object containing:
+{
+  "solutionRequest": boolean (true if seeking solutions),
+  "painAndAnger": boolean (true if expressing frustration),
+  "adviceRequest": boolean (true if seeking advice),
+  "moneyTalk": boolean (true if discussing finances),
+  "explanation": string (brief explanation of categorization)
+}`
+        },
+        { 
+          role: "user", 
+          content: `Title: ${title}\nContent: ${content}` 
+        }
+      ],
+      temperature: 0.3,
+      response_format: { type: "json_object" }
+    });
+
+    const rawResponse = JSON.parse(response.choices[0].message.content || "{}");
+    const analysis = PostCategorySchema.parse(rawResponse);
+    return analysis;
+  } catch (error) {
+    console.error('Error analyzing post:', error);
+    throw error;
+  }
 }
 
 export async function analyzePostThemes(posts: RedditPost[]): Promise<AnalyzedPost[]> {
@@ -30,50 +66,22 @@ export async function analyzePostThemes(posts: RedditPost[]): Promise<AnalyzedPo
     const batch = posts.slice(i, i + batchSize);
     const batchPromises = batch.map(async (post) => {
       try {
-        const prompt = `Analyze the following Reddit post and categorize it into one of these themes:
-- Solution Requests: Posts asking for solutions to problems
-- Pain & Anger: Posts expressing frustration or negative emotions
-- Advice Requests: Posts seeking guidance or recommendations
-- Money Talk: Posts discussing financial aspects
-
-Post Title: ${post.title}
-Post Content: ${post.content}
-
-Respond with a JSON object containing:
-{
-  "theme": "one of the themes above",
-  "confidence": number between 0 and 1
-}`;
-
-        const response = await openai.chat.completions.create({
-          model: "gpt-3.5-turbo",
-          messages: [
-            {
-              role: "system",
-              content: "You are a post categorization assistant. Analyze the post and respond with the requested JSON format only."
-            },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          temperature: 0.3,
-          response_format: { type: "json_object" }
-        });
-
-        const result = ThemeSchema.parse(JSON.parse(response.choices[0].message.content || "{}"));
-        
+        const analysis = await analyzePost(post.title, post.content);
         return {
           ...post,
-          theme: result.theme,
-          confidence: result.confidence,
+          categories: analysis
         };
       } catch (error) {
         console.error("Error analyzing post:", error);
         return {
           ...post,
-          theme: "Uncategorized",
-          confidence: 0,
+          categories: {
+            solutionRequest: false,
+            painAndAnger: false,
+            adviceRequest: false,
+            moneyTalk: false,
+            explanation: "Failed to analyze post"
+          }
         };
       }
     });
