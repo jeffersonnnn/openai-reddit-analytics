@@ -22,7 +22,12 @@ export default function Home() {
         toast.error(`Failed to add r/${name}. Please check if the subreddit exists and is not NSFW.`);
       }
     } catch (error) {
-      toast.error("Failed to add subreddit. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      toast.error(errorMessage);
+      console.error('Error adding subreddit:', {
+        name,
+        error: errorMessage
+      });
     } finally {
       setIsAdding(false);
     }

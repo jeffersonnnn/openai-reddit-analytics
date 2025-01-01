@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { validateSubreddit } from './redditClient';
 
 export interface Subreddit {
   name: string;
@@ -14,6 +13,17 @@ interface SubredditStore {
   removeSubreddit: (name: string) => void;
 }
 
+async function validateSubredditAPI(name: string): Promise<boolean> {
+  const response = await fetch(`/api/validate-subreddit?name=${encodeURIComponent(name)}`);
+  const data = await response.json();
+  
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to validate subreddit');
+  }
+  
+  return data.isValid;
+}
+
 export const useSubredditStore = create<SubredditStore>()(
   persist(
     (set) => ({
@@ -22,20 +32,32 @@ export const useSubredditStore = create<SubredditStore>()(
         { name: "openai", url: "https://reddit.com/r/openai", addedAt: new Date() },
       ],
       addSubreddit: async (name: string) => {
-        const isValid = await validateSubreddit(name);
-        if (!isValid) return false;
+        try {
+          const isValid = await validateSubredditAPI(name);
+          if (!isValid) {
+            console.error(`Subreddit '${name}' validation failed`);
+            return false;
+          }
 
-        set((state) => ({
-          subreddits: [
-            ...state.subreddits,
-            {
-              name,
-              url: `https://reddit.com/r/${name}`,
-              addedAt: new Date(),
-            },
-          ],
-        }));
-        return true;
+          const cleanName = name.replace(/^r\//, '');
+          set((state) => ({
+            subreddits: [
+              ...state.subreddits,
+              {
+                name: cleanName,
+                url: `https://reddit.com/r/${cleanName}`,
+                addedAt: new Date(),
+              },
+            ],
+          }));
+          return true;
+        } catch (error) {
+          console.error('Failed to add subreddit:', {
+            name,
+            error: error instanceof Error ? error.message : String(error)
+          });
+          throw error;
+        }
       },
       removeSubreddit: (name: string) =>
         set((state) => ({

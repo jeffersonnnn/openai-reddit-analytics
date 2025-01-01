@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { type RedditPost } from "@/lib/redditClient";
 import { analyzePostThemes, type AnalyzedPost } from "@/lib/openaiClient";
 import { Loader2 } from "lucide-react";
+import { StartupIdeasSheet } from "@/components/StartupIdeasSheet";
 
 interface Theme {
   name: string;
@@ -36,6 +37,7 @@ export function ThemeCards({ subreddit }: ThemeCardsProps) {
         setLoading(true);
         setError(null);
         
+        console.log('Fetching posts for analysis:', subreddit);
         // Fetch posts from API
         const response = await fetch(`/api/posts?subreddit=${subreddit}`);
         const data = await response.json();
@@ -43,6 +45,8 @@ export function ThemeCards({ subreddit }: ThemeCardsProps) {
         if (!response.ok) {
           throw new Error(data.error || 'Failed to fetch posts');
         }
+        
+        console.log('Fetched posts:', { count: data.posts.length });
         
         // Initialize empty theme map
         const themeMap = new Map<string, AnalyzedPost[]>();
@@ -56,8 +60,10 @@ export function ThemeCards({ subreddit }: ThemeCardsProps) {
         }));
         setThemes(initialThemes);
         
+        console.log('Analyzing posts with OpenAI...');
         // Analyze posts with OpenAI
         const analyzedPosts = await analyzePostThemes(data.posts);
+        console.log('Posts analyzed:', { count: analyzedPosts.length });
         
         // Group posts by theme
         analyzedPosts.forEach(post => {
@@ -76,6 +82,7 @@ export function ThemeCards({ subreddit }: ThemeCardsProps) {
           posts
         }));
         
+        console.log('Themes processed:', themeArray.map(t => ({ name: t.name, count: t.count })));
         setThemes(themeArray);
       } catch (err) {
         console.error("Error analyzing posts:", err);
@@ -105,6 +112,14 @@ export function ThemeCards({ subreddit }: ThemeCardsProps) {
         </div>
       )}
       
+      <div className="flex justify-end">
+        {!loading && themes.some(theme => theme.posts.length > 0) && (
+          <StartupIdeasSheet 
+            analyzedPosts={themes.flatMap(theme => theme.posts)}
+          />
+        )}
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {themes.map((theme) => (
           <Sheet key={theme.name}>
@@ -127,7 +142,7 @@ export function ThemeCards({ subreddit }: ThemeCardsProps) {
               <SheetHeader>
                 <SheetTitle>{theme.name}</SheetTitle>
               </SheetHeader>
-              <div className="mt-6 space-y-6">
+              <div className="mt-6 space-y-6 h-[calc(100vh-8rem)] overflow-y-auto pr-6">
                 {theme.posts.map((post) => (
                   <div key={post.url} className="space-y-2">
                     <a

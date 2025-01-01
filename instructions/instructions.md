@@ -60,6 +60,8 @@ Users can explore categorized themes of posts.
 #### User Story:
 Users can dynamically add new subreddit cards and trigger re-analysis.
 
+the goal of @Codebase is to go into reddit communities of high finance people in private equity, hedge funds and investment banking and then find out their problems and then suggest AI agent startup ideas that will solve these problems for them so i can build and sell to the people of the subreddit
+
 ---
 
 ## File Structure
@@ -68,29 +70,49 @@ Users can dynamically add new subreddit cards and trigger re-analysis.
 reddit-analytics-platform
 ├── README.md
 ├── app
+│   ├── [subreddit]
+│   │   └── page.tsx
+│   ├── api
+│   │   └── posts
 │   ├── favicon.ico
 │   ├── globals.css
 │   ├── layout.tsx
 │   └── page.tsx
 ├── components
-│   ├── ui
-│   ├── SubredditCard.tsx
 │   ├── AddSubredditModal.tsx
+│   ├── SubredditCard.tsx
+│   ├── ThemeCards.tsx
 │   ├── TopPostsTable.tsx
-│   └── ThemeCards.tsx
+│   └── ui
+│       ├── badge.tsx
+│       ├── button.tsx
+│       ├── card.tsx
+│       ├── dialog.tsx
+│       ├── input.tsx
+│       ├── label.tsx
+│       ├── sheet.tsx
+│       ├── table.tsx
+│       └── tabs.tsx
+├── components.json
+├── eslint.config.mjs
+├── instructions
+│   └── instructions.md
 ├── lib
+│   ├── openaiClient.ts
 │   ├── redditClient.ts
-│   └── openaiClient.ts
-├── pages
-│   └── [subreddit]
-│       ├── index.tsx
-│       ├── TopPosts.tsx
-│       └── Themes.tsx
+│   ├── subredditStore.ts
+│   └── utils.ts
+├── next-env.d.ts
+├── next.config.ts
+├── package-lock.json
+├── package.json
+├── postcss.config.mjs
 ├── public
-│   ├── icons
-│   │   ├── globe.svg
-│   │   ├── add.svg
-│   │   └── settings.svg
+│   ├── file.svg
+│   ├── globe.svg
+│   ├── next.svg
+│   ├── vercel.svg
+│   └── window.svg
 ├── tailwind.config.ts
 └── tsconfig.json
 ```
